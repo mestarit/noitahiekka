@@ -1,8 +1,10 @@
+// HALOOO https://github.com/dust-engine/dust https://dust.rs
+
 fn main() {
     pollster::block_on(run());
 }
 
-use noitahiekka::State;
+use noitahiekka::{State, Chunk};
 use winit::{
     event::*, event_loop::{ControlFlow, EventLoop}, keyboard::{Key, NamedKey}, window::WindowBuilder
 };
@@ -16,6 +18,7 @@ pub async fn run() {
     let mut state = State::new(&window).await;
 
     let window = &window;
+    let mut i = 0;
     event_loop.run(move |event, elwt| match event {
         Event::WindowEvent {
             ref event,
@@ -36,10 +39,19 @@ pub async fn run() {
             }
             WindowEvent::RedrawRequested => {
                 state.update();
+                if i % 60*4 == 0 {
+                    let mut chunk_in = Chunk::default();
+                    chunk_in.voxels[1][0][0] = 1;
+                    state.start_compute(&chunk_in);
+                }
+                i += 1;
+                if let Some(chunk_out) = state.recv_compute() {
+                    eprintln!("Chunk!! {chunk_out:?}");
+                }
                 match state.render() {
                     Ok(_) => {}
                     // Reconfigure the surface if lost
-                    Err(wgpu::SurfaceError::Lost) => state.resize(state.size),
+                    Err(wgpu::SurfaceError::Lost) => state.resize(state.win_size),
                     // The system is out of memory, we should probably quit
                     Err(wgpu::SurfaceError::OutOfMemory) => elwt.exit(),
                     // All other errors (Outdated, Timeout) should be resolved by the next frame
